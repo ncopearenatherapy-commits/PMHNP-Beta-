@@ -1,9 +1,156 @@
 import streamlit as st
 import random
 from questions import questions
+import plotly.graph_objects as go
+
+def render_mastery_donut(label, value):
+    percent = int(value * 100)
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                values=[percent, 100 - percent],
+                hole=0.75,
+                textinfo="none",
+                hoverinfo="skip",
+                marker=dict(
+                    colors=["#3b82f6", "#e5e7eb"],
+                    line=dict(color="white", width=2)
+                ),
+            )
+        ]
+    )
+
+    fig.update_layout(
+        height=180,
+        margin=dict(t=10, b=10, l=10, r=10),
+        showlegend=False,
+        annotations=[
+            dict(
+                text=f"<b>{percent}%</b><br>{label}",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=16)
+            )
+        ],
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+def render_progress_donut(correct, total):
+    percent = int((correct / total) * 100) if total > 0 else 0
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                values=[percent, 100 - percent],
+                hole=0.75,
+                textinfo="none",
+                hoverinfo="skip",
+                marker=dict(
+                    colors=["#6366f1", "#e5e7eb"],
+                    line=dict(color="white", width=2)
+                ),
+            )
+        ]
+    )
+
+    fig.update_layout(
+        height=180,
+        margin=dict(t=10, b=10, l=10, r=10),
+        showlegend=False,
+        annotations=[
+            dict(
+                text=f"<b>{percent}%</b><br>Progress",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=16)
+            )
+        ],
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+def render_performance_donut(label, correct, total):
+    percent = int((correct / total) * 100) if total > 0 else 0
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                values=[percent, 100 - percent],
+                hole=0.75,
+                textinfo="none",
+                hoverinfo="skip",
+                marker=dict(
+                    colors=["#10b981", "#e5e7eb"],
+                    line=dict(color="white", width=2)
+                ),
+            )
+        ]
+    )
+
+    fig.update_layout(
+        height=180,
+        margin=dict(t=10, b=10, l=10, r=10),
+        showlegend=False,
+        annotations=[
+            dict(
+                text=f"<b>{percent}%</b><br>{label}",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=16)
+            )
+        ],
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 st.set_page_config(page_title="Adaptive Learning Prototype", layout="centered")
+def render_progress_donut(current_index, total_questions):
+    completed = current_index
+    remaining = max(total_questions - completed, 0)
+    percent = int((completed / total_questions) * 100) if total_questions else 0
 
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                values=[completed, remaining],
+                hole=0.72,
+                sort=False,
+                direction="clockwise",
+                textinfo="none",
+                hoverinfo="skip",
+                marker=dict(
+                    colors=["#6366f1", "#e5e7eb"],
+                    line=dict(color="white", width=4)
+                ),
+            )
+        ]
+    )
+
+    fig.update_layout(
+        height=220,
+        margin=dict(t=10, b=10, l=10, r=10),
+        showlegend=False,
+        annotations=[
+            dict(
+                text=f"<b>{percent}%</b><br>Complete",
+                x=0.5,
+                y=0.5,
+                font=dict(size=22, color="#111827"),
+                showarrow=False,
+            )
+        ],
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 # ---------------------------
 # Helper functions
@@ -33,6 +180,9 @@ def initialize_session_state():
 
     if "topic_stats" not in st.session_state:
         st.session_state.topic_stats = {}
+        
+    if "topic_performance" not in st.session_state:
+        st.session_state.topic_performance = {}
 
 
 def get_current_question():
@@ -111,11 +261,20 @@ if not st.session_state.submitted:
             st.session_state.questions_answered += 1
 
             is_correct = st.session_state.selected_answer == correct_answer_key
-            if is_correct:
-                st.session_state.score += 1
+            topic = question.get("topic", "Unknown")
 
-            update_mastery(question, is_correct)
-            st.rerun()
+        if topic not in st.session_state.topic_performance:
+            st.session_state.topic_performance[topic] = {"correct": 0, "total": 0}
+
+            st.session_state.topic_performance[topic]["total"] += 1
+
+        if is_correct:
+            st.session_state.topic_performance[topic]["correct"] += 1
+        if is_correct:
+            st.session_state.score += 1
+
+        update_mastery(question, is_correct)
+        st.rerun()
 
 # ---------------------------
 # Feedback section
@@ -163,8 +322,46 @@ if st.session_state.submitted:
 st.markdown("---")
 st.header("Progress")
 
+
 total_answered = st.session_state.questions_answered
 score = st.session_state.score
+
+render_progress_donut(total_answered, len(questions))
+def render_mastery_donut(label, value):
+    percent = int(value * 100)
+
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                values=[percent, 100 - percent],
+                hole=0.75,
+                textinfo="none",
+                hoverinfo="skip",
+                marker=dict(
+                    colors=["#3b82f6", "#e5e7eb"],
+                    line=dict(color="white", width=2)
+                ),
+            )
+        ]
+    )
+
+    fig.update_layout(
+        height=180,
+        margin=dict(t=10, b=10, l=10, r=10),
+        showlegend=False,
+        annotations=[
+            dict(
+                text=f"<b>{percent}%</b><br>{label}",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(size=16)
+            )
+        ],
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 if total_answered > 0:
     percent = score / total_answered
@@ -179,8 +376,8 @@ st.header("Current Mastery")
 
 if st.session_state.mastery:
     for subtopic, mastery_value in st.session_state.mastery.items():
-        st.write(f"**{subtopic}**: {mastery_value:.2f}")
-        st.progress(mastery_value)
+       render_mastery_donut(subtopic, mastery_value)
+    
 else:
     st.write("No mastery data yet. Answer a question to begin tracking.")
 
@@ -189,12 +386,10 @@ else:
 # ---------------------------
 st.header("Topic Performance")
 
-if st.session_state.topic_stats:
-    for topic_name, stats in st.session_state.topic_stats.items():
-        total = stats["total"]
+if st.session_state.topic_performance:
+    for topic, stats in st.session_state.topic_performance.items():
         correct = stats["correct"]
-        accuracy = correct / total if total > 0 else 0
-        st.write(f"**{topic_name}**: {correct}/{total} correct ({accuracy:.0%})")
-        st.progress(accuracy)
+        total = stats["total"]
+        render_performance_donut(topic, correct, total)
 else:
-    st.write("No topic performance data yet.")
+    st.write("No performance data yet.")
